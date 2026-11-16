@@ -274,8 +274,6 @@
       </div>
       <div class="section-title">我的好友 <span id="friend-count"></span></div>
       <div id="friend-list"></div>
-      <div class="section-title">待我审核的申请</div>
-      <div id="pending-list"></div>
     </div>
 
     <!-- 分组页 -->
@@ -671,18 +669,6 @@ function renderFriends(){
       <div class="friend-info"><div class="user-avatar">${esc(nm.charAt(0))}</div><div><div class="friend-name">${esc(nm)}</div><div class="friend-meta">已通过</div></div></div>
     </div>`;
   }).join('') : (friends.length ? '<div class="empty">没有匹配的好友</div>' : '<div class="empty">还没有好友，用上方输入框添加</div>');
-
-  const pl = document.getElementById('pending-list');
-  pl.innerHTML = pending.length ? pending.map(f => {
-    const nm = (f.friendNickname && f.friendNickname !== 'null') ? f.friendNickname : (f.friendUsername || ('用户 #' + f.userId));
-    return `<div class="friend-item">
-      <div class="friend-info"><div class="user-avatar">申</div><div><div class="friend-name">${esc(nm)}</div><div class="friend-meta">想加你为好友</div></div></div>
-      <div style="display:flex;gap:6px">
-        <button class="btn primary" style="padding:5px 14px;font-size:12.5px" onclick="acceptFriend(${f.id})">通过</button>
-        <button class="btn" style="padding:5px 14px;font-size:12.5px" onclick="rejectFriend(${f.id})">拒绝</button>
-      </div>
-    </div>`;
-  }).join('') : '<div class="empty">暂无待审核申请</div>';
 
   updateProfileBadge();
 }
