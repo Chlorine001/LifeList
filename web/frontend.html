@@ -1,0 +1,681 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>人生清单 · 手账</title>
+<style>
+  :root{
+    --bg:#fafafa;
+    --paper:#ffffff;
+    --ink:#2b2b2b;
+    --ink-soft:#6b6b6b;
+    --ink-faint:#9a9a9a;
+    --line:#ececec;
+    --line-soft:#f2f2f2;
+    --c-todo-bg:#f0f0f0;   --c-todo-tx:#8a8a8a; --c-todo-bd:#e3e3e3;
+    --c-wait-bg:#e3effa;   --c-wait-tx:#5c86ad; --c-wait-bd:#d3e4f5;
+    --c-done-bg:#faf0d6;   --c-done-tx:#a3803a; --c-done-bd:#f0e2bb;
+    --c-later-bg:#e7e3f0;  --c-later-tx:#8375a3; --c-later-bd:#d8d2e8;
+    --accent:#7c9cbf;
+    --radius:10px;
+  }
+  *{margin:0;padding:0;box-sizing:border-box;}
+  html,body{max-width:100%;overflow-x:hidden;}
+  body{
+    background:var(--bg);
+    color:var(--ink);
+    font-family:-apple-system,BlinkMacSystemFont,"PingFang SC","Hiragino Sans GB","Microsoft YaHei",sans-serif;
+    font-size:14px;
+    line-height:1.6;
+    -webkit-font-smoothing:antialiased;
+    padding-bottom:env(safe-area-inset-bottom);
+  }
+  .serif{font-family:Georgia,"Times New Roman","Songti SC","SimSun",serif;}
+  ::selection{background:#dcebf7;}
+
+  /* ===== 登录页 ===== */
+  #login-view{min-height:100vh;display:flex;align-items:center;justify-content:center;padding:24px;}
+  .login-card{width:100%;max-width:400px;background:var(--paper);border:1px solid var(--line);border-radius:14px;padding:40px 32px;}
+  .login-card h1{font-size:24px;text-align:center;font-weight:600;letter-spacing:1px;}
+  .login-card .sub{text-align:center;color:var(--ink-faint);font-size:13px;letter-spacing:2px;margin:10px 0 28px;}
+  .field{margin-bottom:16px;}
+  .field label{display:block;font-size:12px;color:var(--ink-faint);letter-spacing:1px;margin-bottom:8px;}
+  .field input{
+    width:100%;padding:10px 14px;font-size:16px;border:1px solid var(--line);border-radius:8px;
+    background:#fbfbfb;color:var(--ink);outline:none;transition:border-color .15s;
+  }
+  .field input:focus{border-color:#c8d8e8;}
+
+  /* ===== 主界面 ===== */
+  #app-view{display:none;}
+  header.site{position:sticky;top:0;z-index:50;background:rgba(250,250,250,.92);backdrop-filter:blur(8px);border-bottom:1px solid var(--line);}
+  .nav-inner{max-width:980px;margin:0 auto;padding:14px 20px;display:flex;align-items:center;justify-content:space-between;gap:16px;}
+  .brand{font-size:14px;letter-spacing:.5px;color:var(--ink-soft);white-space:nowrap;}
+  .brand b{color:var(--ink);font-weight:600;}
+  nav.tabs{display:flex;gap:4px;background:var(--paper);border:1px solid var(--line);border-radius:999px;padding:3px;}
+  nav.tabs button{
+    border:none;background:transparent;color:var(--ink-soft);padding:6px 16px;border-radius:999px;
+    cursor:pointer;font-size:13px;font-family:inherit;transition:all .18s ease;white-space:nowrap;
+  }
+  nav.tabs button:hover{color:var(--ink);}
+  nav.tabs button.on{background:var(--ink);color:#fff;}
+  .nav-right{display:flex;align-items:center;gap:8px;}
+  .user-avatar{width:28px;height:28px;border-radius:50%;background:var(--ink);color:#fff;display:flex;align-items:center;justify-content:center;font-weight:500;font-size:13px;}
+  .user-name{font-size:13px;color:var(--ink-soft);white-space:nowrap;}
+  .logout-btn{border:1px solid var(--line);background:var(--paper);border-radius:999px;padding:6px 14px;cursor:pointer;font-size:12.5px;color:var(--ink-soft);font-family:inherit;transition:all .18s;}
+  .logout-btn:hover{color:var(--ink);border-color:#d5d5d5;}
+
+  .wrap{max-width:980px;margin:0 auto;padding:0 20px 80px;}
+
+  /* 统计条 */
+  .stat-bar{background:var(--paper);border:1px solid var(--line);border-radius:var(--radius);padding:18px 22px;display:flex;align-items:center;gap:26px;flex-wrap:wrap;margin-top:28px;box-shadow:0 1px 3px rgba(0,0,0,.02);}
+  .stat-num{display:flex;align-items:baseline;gap:6px;white-space:nowrap;}
+  .stat-num .n{font-size:26px;font-weight:600;letter-spacing:.5px;}
+  .stat-num .d{font-size:13px;color:var(--ink-faint);}
+  .stat-mid{flex:1;min-width:180px;}
+  .progress-track{height:5px;background:var(--line-soft);border-radius:99px;overflow:hidden;}
+  .progress-fill{height:100%;background:var(--accent);border-radius:99px;transition:width .5s ease;}
+  .progress-label{margin-top:7px;font-size:12px;color:var(--ink-faint);display:flex;justify-content:space-between;}
+  .stat-chapter{font-size:13px;color:var(--ink-soft);white-space:nowrap;padding:6px 14px;border:1px solid var(--line);border-radius:999px;background:#fbfbfb;}
+  .stat-chapter b{color:var(--ink);font-weight:500;}
+
+  /* 工具行 */
+  .tools{display:flex;align-items:center;gap:10px;margin:22px 0 6px;flex-wrap:wrap;}
+  .search-box{display:flex;align-items:center;gap:8px;flex:1;min-width:200px;max-width:320px;background:var(--paper);border:1px solid var(--line);border-radius:999px;padding:8px 16px;transition:border-color .18s;}
+  .search-box:focus-within{border-color:#c8d8e8;}
+  .search-box input{border:none;outline:none;background:transparent;font-family:inherit;font-size:13px;color:var(--ink);width:100%;}
+  .search-box input::placeholder{color:var(--ink-faint);}
+  select.filter{appearance:none;-webkit-appearance:none;background:var(--paper) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='10' viewBox='0 0 10 10'%3E%3Cpath d='M1 3l4 4 4-4' fill='none' stroke='%239a9a9a' stroke-width='1.4' stroke-linecap='round'/%3E%3C/svg%3E") no-repeat right 14px center;border:1px solid var(--line);border-radius:999px;padding:8px 36px 8px 16px;font-family:inherit;font-size:13px;color:var(--ink-soft);cursor:pointer;outline:none;transition:border-color .18s;}
+  select.filter:hover{border-color:#d8d8d8;}
+  select.filter:focus{border-color:#c8d8e8;}
+  .btn{display:inline-flex;align-items:center;justify-content:center;border:1px solid var(--line);background:var(--paper);border-radius:999px;padding:9px 26px;font-family:inherit;font-size:13px;color:var(--ink-soft);cursor:pointer;transition:all .15s;}
+  .btn:hover{color:var(--ink);border-color:#d5d5d5;}
+  .btn.primary{background:var(--ink);color:#fff;border-color:var(--ink);}
+  .btn.primary:hover{background:#444;color:#fff;}
+
+  /* 分类标题与卡片 */
+  .cat-title{margin:26px 0 14px;display:flex;align-items:center;gap:12px;font-size:13px;color:var(--ink-faint);letter-spacing:2px;}
+  .cat-title::after{content:"";flex:1;height:1px;background:var(--line);}
+  .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(196px,1fr));gap:12px;}
+  .card{background:var(--paper);border:1px solid var(--line);border-radius:var(--radius);padding:14px 15px;cursor:pointer;position:relative;box-shadow:0 1px 2px rgba(0,0,0,.015);transition:box-shadow .18s ease,transform .18s ease,border-color .18s ease;display:flex;flex-direction:column;gap:8px;min-height:104px;text-align:left;font-family:inherit;}
+  .card:hover{box-shadow:0 4px 14px rgba(0,0,0,.06);transform:translateY(-1px);border-color:#e0e0e0;}
+  .card-top{display:flex;align-items:center;justify-content:space-between;}
+  .card-num{font-size:11px;color:var(--ink-faint);letter-spacing:1px;font-family:Georgia,serif;}
+  .card-marks{display:flex;gap:6px;align-items:center;}
+  .mark-photo{opacity:.5;}
+  .card-name{font-size:13.5px;line-height:1.5;color:var(--ink);flex:1;word-break:break-all;}
+  .card-bot{display:flex;align-items:center;justify-content:space-between;gap:6px;flex-wrap:wrap;}
+  .pill{font-size:11px;padding:2.5px 10px;border-radius:999px;border:1px solid;letter-spacing:.5px;white-space:nowrap;}
+  .pill.todo{background:var(--c-todo-bg);color:var(--c-todo-tx);border-color:var(--c-todo-bd);}
+  .pill.wait{background:var(--c-wait-bg);color:var(--c-wait-tx);border-color:var(--c-wait-bd);}
+  .pill.done{background:var(--c-done-bg);color:var(--c-done-tx);border-color:var(--c-done-bd);}
+  .pill.later{background:var(--c-later-bg);color:var(--c-later-tx);border-color:var(--c-later-bd);}
+  .card-date{font-size:11px;color:var(--ink-faint);white-space:nowrap;}
+  .card.s-done{border-color:#efe6cc;}
+  .card.s-wait{border-color:#e0ecf7;}
+  .card.s-later{border-color:#e2dded;}
+  .grid-empty{grid-column:1/-1;text-align:center;padding:60px 0;color:var(--ink-faint);font-size:13px;letter-spacing:1px;}
+
+  /* 弹窗 */
+  .modal-mask{position:fixed;inset:0;background:rgba(40,40,40,.32);z-index:100;display:flex;align-items:flex-start;justify-content:center;padding:6vh 16px 16px;opacity:0;pointer-events:none;transition:opacity .2s ease;overflow-y:auto;}
+  .modal-mask.show{opacity:1;pointer-events:auto;}
+  .modal{background:var(--paper);border-radius:14px;width:100%;max-width:520px;box-shadow:0 18px 50px rgba(0,0,0,.14);transform:translateY(10px);transition:transform .22s ease;}
+  .modal-mask.show .modal{transform:translateY(0);}
+  .modal-head{padding:20px 24px 0;display:flex;justify-content:space-between;align-items:flex-start;gap:12px;}
+  .modal-head .m-num{font-size:11px;color:var(--ink-faint);letter-spacing:1.5px;font-family:Georgia,serif;}
+  .modal-head h3{font-size:16px;font-weight:600;margin-top:2px;}
+  .modal-close{border:none;background:var(--line-soft);width:28px;height:28px;border-radius:50%;cursor:pointer;color:var(--ink-soft);font-size:14px;line-height:1;flex:none;transition:background .15s;}
+  .modal-close:hover{background:#e6e6e6;color:var(--ink);}
+  .modal-body{padding:18px 24px 24px;display:flex;flex-direction:column;gap:18px;}
+  .field label{display:block;font-size:12px;color:var(--ink-faint);letter-spacing:1px;margin-bottom:8px;}
+  .field input[type=text],.field textarea,.field select{
+    width:100%;font-family:inherit;font-size:13px;color:var(--ink);border:1px solid var(--line);border-radius:8px;padding:10px 12px;background:#fbfbfb;outline:none;transition:border-color .15s;
+  }
+  .field textarea{min-height:76px;resize:vertical;line-height:1.7;}
+  .field input:focus,.field textarea:focus,.field select:focus{border-color:#c8d8e8;}
+  .status-row{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;}
+  .status-row button{border:1px solid var(--line);background:#fbfbfb;border-radius:8px;padding:8px 4px;font-family:inherit;font-size:12.5px;color:var(--ink-soft);cursor:pointer;transition:all .15s;}
+  .status-row button:hover{border-color:#ddd;}
+  .status-row button.on.f-todo{background:var(--c-todo-bg);border-color:var(--c-todo-bd);color:var(--c-todo-tx);}
+  .status-row button.on.f-wait{background:var(--c-wait-bg);border-color:var(--c-wait-bd);color:var(--c-wait-tx);}
+  .status-row button.on.f-done{background:var(--c-done-bg);border-color:var(--c-done-bd);color:var(--c-done-tx);}
+  .status-row button.on.f-later{background:var(--c-later-bg);border-color:var(--c-later-bd);color:var(--c-later-tx);}
+  .mood-grid{display:flex;flex-wrap:wrap;gap:8px;}
+  .mood-grid button{border:1px solid var(--line);background:#fbfbfb;border-radius:999px;padding:5px 14px;font-family:inherit;font-size:12.5px;color:var(--ink-soft);cursor:pointer;transition:all .15s;}
+  .mood-grid button:hover{border-color:#ddd;}
+  .mood-grid button.on{background:var(--ink);color:#fff;border-color:var(--ink);}
+  .photo-add{align-self:flex-start;border:1px dashed #d5d5d5;border-radius:8px;background:#fbfbfb;padding:8px 16px;font-family:inherit;font-size:12.5px;color:var(--ink-soft);cursor:pointer;transition:all .15s;}
+  .photo-add:hover{border-color:#bbb;color:var(--ink);}
+  .modal-foot{display:flex;gap:10px;justify-content:flex-end;padding:0 24px 24px;}
+
+  /* toast */
+  .toast{position:fixed;left:50%;bottom:40px;transform:translateX(-50%) translateY(16px);background:var(--ink);color:#fff;font-size:13px;letter-spacing:1px;padding:10px 26px;border-radius:999px;z-index:200;opacity:0;transition:all .3s ease;pointer-events:none;}
+  .toast.show{opacity:1;transform:translateX(-50%) translateY(0);}
+
+  /* 好友页 */
+  .friend-item{display:flex;align-items:center;justify-content:space-between;gap:12px;background:var(--paper);border:1px solid var(--line);border-radius:var(--radius);padding:14px 16px;margin-bottom:10px;}
+  .friend-info{display:flex;align-items:center;gap:10px;}
+  .friend-name{font-weight:500;font-size:14px;}
+  .friend-meta{font-size:12px;color:var(--ink-faint);}
+  .section-title{margin:28px 0 14px;display:flex;align-items:center;gap:12px;font-size:14px;color:var(--ink);letter-spacing:2px;font-weight:600;}
+  .section-title::after{content:"";flex:1;height:1px;background:var(--line);}
+  .empty{text-align:center;padding:40px 20px;color:var(--ink-faint);font-size:13px;letter-spacing:1px;}
+
+  @media (max-width:768px){
+    .nav-inner{padding:12px 14px;}
+    .grid{grid-template-columns:repeat(2,1fr);gap:10px;}
+    .wrap{padding:0 14px 80px;}
+    .status-row{grid-template-columns:repeat(2,1fr);}
+  }
+  @media (max-width:420px){
+    .grid{grid-template-columns:1fr;}
+  }
+</style>
+</head>
+<body>
+
+<!-- ===== 登录页 ===== -->
+<div id="login-view">
+  <div class="login-card">
+    <h1 class="serif">人生清单</h1>
+    <div class="sub">把想做的事，一件一件珍藏</div>
+    <form id="auth-form">
+      <div class="field" id="nickname-field" style="display:none;">
+        <label>昵称</label>
+        <input type="text" id="f-nickname" placeholder="给自己起个名字">
+      </div>
+      <div class="field">
+        <label>用户名</label>
+        <input type="text" id="f-username" placeholder="登录名，3-64 位" autocomplete="username">
+      </div>
+      <div class="field">
+        <label>密码</label>
+        <input type="password" id="f-password" placeholder="密码，6-64 位" autocomplete="current-password">
+      </div>
+      <button type="submit" class="btn primary" style="width:100%" id="auth-submit">登 录</button>
+    </form>
+    <div style="text-align:center;margin-top:14px;font-size:13px;color:var(--ink-faint);">
+      <span id="switch-text">还没有账号？</span> <a id="switch-link" style="color:var(--ink);cursor:pointer;text-decoration:underline;">注册</a>
+    </div>
+  </div>
+</div>
+
+<!-- ===== 主界面 ===== -->
+<div id="app-view">
+  <header class="site">
+    <div class="nav-inner">
+      <div class="brand"><b>人生清单</b> · 手账</div>
+      <nav class="tabs">
+        <button class="on" data-tab="items">小事清单</button>
+        <button data-tab="friends">好友与分组</button>
+      </nav>
+      <div class="nav-right">
+        <div class="user-avatar" id="user-avatar">我</div>
+        <span class="user-name" id="user-name"></span>
+        <button class="logout-btn" id="logout-btn">退出</button>
+      </div>
+    </div>
+  </header>
+
+  <div class="wrap">
+    <!-- 小事清单页 -->
+    <div id="panel-items">
+      <div class="stat-bar">
+        <div class="stat-num"><span class="n" id="stat-done">0</span><span class="d">/ <span id="stat-total">0</span> 件</span></div>
+        <div class="stat-mid">
+          <div class="progress-track"><div class="progress-fill" id="progress-fill" style="width:0%"></div></div>
+          <div class="progress-label"><span>已珍藏 <span id="progress-done">0</span> 件</span><span id="progress-chapter">第一章</span></div>
+        </div>
+        <div class="stat-chapter">进度 <b id="chapter-name">刚刚开始</b></div>
+      </div>
+
+      <div class="tools">
+        <div class="search-box">
+          <input type="text" id="search-input" placeholder="搜索一件…">
+        </div>
+        <select class="filter" id="stage-filter"><option value="">全部分类</option></select>
+        <button class="btn primary" id="add-item-btn">＋ 添加小事</button>
+      </div>
+
+      <div id="list-body"></div>
+    </div>
+
+    <!-- 好友页 -->
+    <div id="panel-friends" style="display:none;">
+      <div class="tools">
+        <div class="search-box" style="max-width:none;">
+          <input type="text" id="friend-name-input" placeholder="输入对方用户名添加好友">
+        </div>
+        <button class="btn primary" id="add-friend-btn">＋ 添加好友</button>
+        <button class="btn" id="new-group-btn">＋ 新建分组</button>
+      </div>
+      <div class="section-title">我的好友</div>
+      <div id="friend-list"></div>
+      <div class="section-title">待我审核的申请</div>
+      <div id="pending-list"></div>
+      <div class="section-title">我的分组</div>
+      <div id="group-list"></div>
+    </div>
+  </div>
+</div>
+
+<!-- 小事记录弹窗 -->
+<div class="modal-mask" id="item-mask">
+  <div class="modal">
+    <div class="modal-head">
+      <div>
+        <div class="m-num" id="item-no"></div>
+        <h3 id="item-modal-title">记录一件小事</h3>
+      </div>
+      <button class="modal-close" id="item-close">×</button>
+    </div>
+    <div class="modal-body">
+      <div class="field">
+        <label>想做的事</label>
+        <input type="text" id="m-title" placeholder="写下一件想做的事">
+      </div>
+      <div class="field">
+        <label>分类 / 阶段</label>
+        <select id="m-stage"></select>
+      </div>
+      <div class="field">
+        <label>状态</label>
+        <div class="status-row" id="m-status-row"></div>
+      </div>
+      <div class="field">
+        <label>完成日期</label>
+        <input type="date" id="m-date">
+      </div>
+      <div class="field">
+        <label>当时的心情</label>
+        <div class="mood-grid" id="m-mood-grid"></div>
+      </div>
+      <div class="field">
+        <label>一句话记录</label>
+        <textarea id="m-note" placeholder="写下此刻的心情…"></textarea>
+      </div>
+      <div class="field">
+        <label>照片</label>
+        <div class="photo-add" id="photo-add-btn">＋ 添加照片</div>
+        <input type="file" id="photo-input" accept="image/*" style="display:none">
+      </div>
+    </div>
+    <div class="modal-foot">
+      <button class="btn" id="item-cancel">取消</button>
+      <button class="btn primary" id="item-save">保存记录</button>
+    </div>
+  </div>
+</div>
+
+<!-- 新建分组弹窗 -->
+<div class="modal-mask" id="group-mask">
+  <div class="modal">
+    <div class="modal-head">
+      <div><h3>新建分组</h3></div>
+      <button class="modal-close" id="group-close">×</button>
+    </div>
+    <div class="modal-body">
+      <div class="field">
+        <label>组名</label>
+        <input type="text" id="g-name" placeholder="如：大学同学">
+      </div>
+    </div>
+    <div class="modal-foot">
+      <button class="btn" id="group-cancel">取消</button>
+      <button class="btn primary" id="group-save">创建</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+// ============ 配置与状态 ============
+const API_BASE = 'http://localhost:8080';
+const LS_TOKEN = 'wb_lifelist_token';
+const LS_USER = 'wb_lifelist_user';
+
+let token = localStorage.getItem(LS_TOKEN) || '';
+let user = JSON.parse(localStorage.getItem(LS_USER) || 'null');
+let isRegister = false;
+let items = [];
+let friends = [];
+let pending = [];
+let groups = [];
+let editingItemId = null;
+let curStatus = '想去做';
+let curMood = '';
+
+const STATUS_LIST = ['想去做','等待发生','已经珍藏','留给以后'];
+const STATUS_KEY = { '想去做':'todo', '等待发生':'wait', '已经珍藏':'done', '留给以后':'later' };
+const MOOD_LIST = ['平静','期待','惊喜','感动','放松','疲惫','迷茫','想念','自由','其他'];
+const DEFAULT_STAGES = ['童年','青春','大学','初入社会','三十而立','余生漫长'];
+
+// ============ 工具 ============
+function esc(s){ return String(s==null?'':s).replace(/[&<>"']/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+function showToast(msg){
+  const t = document.getElementById('toast');
+  t.textContent = msg; t.classList.add('show');
+  clearTimeout(t._timer);
+  t._timer = setTimeout(()=>t.classList.remove('show'), 2000);
+}
+
+// ============ API 封装 ============
+async function api(path, options = {}) {
+  const headers = { 'Content-Type': 'application/json' };
+  if (token) headers['Authorization'] = 'Bearer ' + token;
+  const res = await fetch(API_BASE + path, { ...options, headers: { ...headers, ...(options.headers||{}) } });
+  if (res.status === 401) {
+    logout();
+    throw new Error('登录已失效，请重新登录');
+  }
+  const data = await res.json();
+  if (data.code !== 0) throw new Error(data.message || '请求失败');
+  return data.data;
+}
+
+// ============ 登录/注册 ============
+function switchMode(){
+  isRegister = !isRegister;
+  document.getElementById('nickname-field').style.display = isRegister ? '' : 'none';
+  document.getElementById('auth-submit').textContent = isRegister ? '注 册' : '登 录';
+  document.getElementById('switch-text').textContent = isRegister ? '已有账号？' : '还没有账号？';
+  document.getElementById('switch-link').textContent = isRegister ? '登录' : '注册';
+}
+
+async function doAuth(e){
+  e.preventDefault();
+  const username = document.getElementById('f-username').value.trim();
+  const password = document.getElementById('f-password').value;
+  const nickname = document.getElementById('f-nickname').value.trim();
+  if (!username || !password) { showToast('请填写用户名和密码'); return; }
+  try {
+    const path = isRegister ? '/api/auth/register' : '/api/auth/login';
+    const body = isRegister ? { username, password, nickname } : { username, password };
+    const data = await api(path, { method: 'POST', body: JSON.stringify(body) });
+    token = data.token;
+    user = { id: data.userId, username: data.username, nickname: data.nickname };
+    localStorage.setItem(LS_TOKEN, token);
+    localStorage.setItem(LS_USER, JSON.stringify(user));
+    enterApp();
+  } catch(err) { showToast(err.message); }
+}
+
+function logout(){
+  token = ''; user = null;
+  localStorage.removeItem(LS_TOKEN); localStorage.removeItem(LS_USER);
+  document.getElementById('app-view').style.display = 'none';
+  document.getElementById('login-view').style.display = 'flex';
+}
+
+// ============ 进入主界面 ============
+async function enterApp(){
+  document.getElementById('login-view').style.display = 'none';
+  document.getElementById('app-view').style.display = 'block';
+  document.getElementById('user-name').textContent = user.nickname || user.username;
+  document.getElementById('user-avatar').textContent = (user.nickname || user.username).charAt(0);
+  await refreshAll();
+}
+
+// ============ 统一刷新入口 ============
+async function refreshAll(){
+  await Promise.all([loadItems(), loadFriends()]);
+  renderList();
+  renderStageFilter();
+  renderProgress();
+}
+
+async function loadItems(){
+  try { items = await api('/api/items'); } catch(e){ items = []; showToast(e.message); }
+}
+async function loadFriends(){
+  try {
+    friends = await api('/api/friends');
+    pending = await api('/api/friends/pending');
+    groups = await api('/api/groups');
+  } catch(e){ showToast(e.message); }
+  renderFriends();
+}
+
+// ============ 渲染：清单卡片墙 ============
+function getStages(){
+  const set = new Set(DEFAULT_STAGES);
+  items.forEach(i => { if (i.stage) set.add(i.stage); });
+  return [...set];
+}
+
+function renderStageFilter(){
+  const sel = document.getElementById('stage-filter');
+  const cur = sel.value;
+  sel.innerHTML = '<option value="">全部分类</option>' + getStages().map(s => `<option value="${esc(s)}">${esc(s)}</option>`).join('');
+  sel.value = cur;
+  const mSel = document.getElementById('m-stage');
+  mSel.innerHTML = getStages().map(s => `<option value="${esc(s)}">${esc(s)}</option>`).join('');
+}
+
+function renderList(){
+  const body = document.getElementById('list-body');
+  const kw = document.getElementById('search-input').value.trim().toLowerCase();
+  const stage = document.getElementById('stage-filter').value;
+  const filtered = items.filter(i => {
+    const matchKw = !kw || (i.title||'').toLowerCase().includes(kw) || (i.note||'').toLowerCase().includes(kw);
+    const matchStage = !stage || i.stage === stage;
+    return matchKw && matchStage;
+  });
+  if (filtered.length === 0) {
+    body.innerHTML = '<div class="grid-empty">还没有记录，点「＋ 添加小事」开始吧</div>';
+    return;
+  }
+  const byStage = {};
+  filtered.forEach(i => { (byStage[i.stage||'未分类'] = byStage[i.stage||'未分类']||[]).push(i); });
+  let html = '';
+  for (const [stage, list] of Object.entries(byStage)) {
+    html += `<div class="cat-title">${esc(stage)} <span style="letter-spacing:0">· ${list.length} 件</span></div>
+      <div class="grid">`;
+    html += list.map(i => {
+      const key = STATUS_KEY[i.status] || 'todo';
+      return `<div class="card s-${key}" onclick="openItem(${i.id})">
+        <div class="card-top">
+          <span class="card-num">№ ${String(i.id).padStart(3,'0')}</span>
+          <span class="card-marks">${i.photo ? '<svg class="mark-photo" width="14" height="14" viewBox="0 0 14 14" fill="none"><rect x="1" y="3" width="12" height="10" rx="1.5" stroke="#6b6b6b" stroke-width="1.2"/><circle cx="4.8" cy="6.5" r="1.2" fill="#6b6b6b"/></svg>' : ''}</span>
+        </div>
+        <div class="card-name">${esc(i.title)}</div>
+        <div class="card-bot">
+          <span class="pill ${key}">${esc(i.status)}</span>
+          ${i.doneDate ? `<span class="card-date">${esc(i.doneDate)}</span>` : ''}
+        </div>
+      </div>`;
+    }).join('');
+    html += '</div>';
+  }
+  body.innerHTML = html;
+}
+
+function renderProgress(){
+  const total = items.length;
+  const done = items.filter(i => i.status === '已经珍藏').length;
+  const pct = total ? Math.round(done/total*100) : 0;
+  document.getElementById('stat-done').textContent = done;
+  document.getElementById('stat-total').textContent = total;
+  document.getElementById('progress-done').textContent = done;
+  document.getElementById('progress-fill').style.width = pct + '%';
+  document.getElementById('progress-chapter').textContent = chapterName(done);
+  document.getElementById('chapter-name').textContent = chapterName(done);
+}
+
+function chapterName(done){
+  if (done >= 100) return '全部完成';
+  if (done >= 80) return '尾声';
+  if (done >= 60) return '第四章';
+  if (done >= 40) return '第三章';
+  if (done >= 20) return '第二章';
+  if (done > 0) return '第一章';
+  return '刚刚开始';
+}
+
+// ============ 状态/心情胶囊渲染 ============
+function renderStatusRow(){
+  const box = document.getElementById('m-status-row');
+  box.innerHTML = STATUS_LIST.map(s => `<button class="${s===curStatus?'on f-'+STATUS_KEY[s]:''}" data-val="${esc(s)}">${esc(s)}</button>`).join('');
+  box.querySelectorAll('button').forEach(b => {
+    b.onclick = () => { curStatus = b.dataset.val; renderStatusRow(); };
+  });
+}
+function renderMoodGrid(){
+  const box = document.getElementById('m-mood-grid');
+  box.innerHTML = MOOD_LIST.map(m => `<button class="${m===curMood?'on':''}" data-val="${esc(m)}">${esc(m)}</button>`).join('');
+  box.querySelectorAll('button').forEach(b => {
+    b.onclick = () => { curMood = (b.dataset.val===curMood ? '' : b.dataset.val); renderMoodGrid(); };
+  });
+}
+
+// ============ 小事记录弹窗 ============
+function openItem(id){
+  editingItemId = id;
+  const i = items.find(x => x.id === id);
+  document.getElementById('item-no').textContent = i ? `№ ${String(i.id).padStart(3,'0')} · ${esc(i.stage||'')}` : '';
+  document.getElementById('item-modal-title').textContent = i ? (i.title || '编辑小事') : '记录一件小事';
+  document.getElementById('m-title').value = i ? i.title : '';
+  document.getElementById('m-stage').value = i && i.stage ? i.stage : (getStages()[0] || '');
+  curStatus = i ? i.status : '想去做';
+  curMood = i && i.mood ? i.mood : '';
+  document.getElementById('m-date').value = i && i.doneDate ? i.doneDate : '';
+  document.getElementById('m-note').value = i && i.note ? i.note : '';
+  renderStatusRow();
+  renderMoodGrid();
+  document.getElementById('item-mask').classList.add('show');
+}
+function openNewItem(){ editingItemId = null; openItem(null); }
+function closeItem(){ document.getElementById('item-mask').classList.remove('show'); }
+
+async function saveItem(){
+  const title = document.getElementById('m-title').value.trim();
+  if (!title) { showToast('请填写想做的事'); return; }
+  const payload = {
+    stage: document.getElementById('m-stage').value || '大学',
+    title: title,
+    status: curStatus,
+    doneDate: document.getElementById('m-date').value || null,
+    mood: curMood || null,
+    note: document.getElementById('m-note').value.trim() || null
+  };
+  try {
+    if (editingItemId) {
+      await api('/api/items/' + editingItemId, { method: 'PUT', body: JSON.stringify(payload) });
+      showToast('已更新');
+    } else {
+      await api('/api/items', { method: 'POST', body: JSON.stringify(payload) });
+      showToast('已添加');
+    }
+    closeItem();
+    await refreshAll();
+  } catch(err){ showToast(err.message); }
+}
+
+// ============ 好友与分组 ============
+function renderFriends(){
+  const fl = document.getElementById('friend-list');
+  fl.innerHTML = friends.length ? friends.map(f => {
+    return `<div class="friend-item">
+      <div class="friend-info"><div class="user-avatar">友</div><div><div class="friend-name">好友 #${f.friendId}</div><div class="friend-meta">已通过</div></div></div>
+    </div>`;
+  }).join('') : '<div class="empty">还没有好友，用上方输入框添加</div>';
+
+  const pl = document.getElementById('pending-list');
+  pl.innerHTML = pending.length ? pending.map(f => {
+    return `<div class="friend-item">
+      <div class="friend-info"><div class="user-avatar">申</div><div><div class="friend-name">用户 #${f.userId}</div><div class="friend-meta">想加你为好友</div></div></div>
+      <div style="display:flex;gap:6px">
+        <button class="btn primary" style="padding:5px 14px;font-size:12.5px" onclick="acceptFriend(${f.id})">通过</button>
+        <button class="btn" style="padding:5px 14px;font-size:12.5px" onclick="rejectFriend(${f.id})">拒绝</button>
+      </div>
+    </div>`;
+  }).join('') : '<div class="empty">暂无待审核申请</div>';
+
+  const gl = document.getElementById('group-list');
+  gl.innerHTML = groups.length ? groups.map(g => {
+    return `<div class="friend-item">
+      <div class="friend-info"><div class="user-avatar">组</div><div><div class="friend-name">${esc(g.name)}</div><div class="friend-meta">分组</div></div></div>
+    </div>`;
+  }).join('') : '<div class="empty">还没有分组，点「＋ 新建分组」</div>';
+}
+
+async function addFriend(){
+  const name = document.getElementById('friend-name-input').value.trim();
+  if (!name) { showToast('请输入对方用户名'); return; }
+  try {
+    await api('/api/friends', { method: 'POST', body: JSON.stringify({ friendUsername: name }) });
+    showToast('已发送申请');
+    document.getElementById('friend-name-input').value = '';
+    await loadFriends();
+  } catch(err){ showToast(err.message); }
+}
+
+async function acceptFriend(id){
+  try { await api('/api/friends/' + id + '/accept', { method: 'POST' }); showToast('已通过'); await loadFriends(); }
+  catch(err){ showToast(err.message); }
+}
+async function rejectFriend(id){
+  try { await api('/api/friends/' + id + '/reject', { method: 'POST' }); showToast('已拒绝'); await loadFriends(); }
+  catch(err){ showToast(err.message); }
+}
+
+function openGroupModal(){ document.getElementById('group-mask').classList.add('show'); }
+function closeGroupModal(){ document.getElementById('group-mask').classList.remove('show'); }
+async function saveGroup(){
+  const name = document.getElementById('g-name').value.trim();
+  if (!name) { showToast('请输入组名'); return; }
+  try {
+    await api('/api/groups', { method: 'POST', body: JSON.stringify({ name }) });
+    showToast('已创建');
+    closeGroupModal();
+    document.getElementById('g-name').value = '';
+    await loadFriends();
+  } catch(err){ showToast(err.message); }
+}
+
+// ============ 事件绑定 ============
+function bindEvents(){
+  document.getElementById('switch-link').onclick = switchMode;
+  document.getElementById('auth-form').onsubmit = doAuth;
+  document.getElementById('logout-btn').onclick = logout;
+
+  document.querySelectorAll('nav.tabs button').forEach(t => {
+    t.onclick = () => {
+      document.querySelectorAll('nav.tabs button').forEach(x => x.classList.remove('on'));
+      t.classList.add('on');
+      const tab = t.dataset.tab;
+      document.getElementById('panel-items').style.display = tab==='items' ? '' : 'none';
+      document.getElementById('panel-friends').style.display = tab==='friends' ? '' : 'none';
+    };
+  });
+
+  document.getElementById('search-input').oninput = renderList;
+  document.getElementById('stage-filter').onchange = renderList;
+  document.getElementById('add-item-btn').onclick = openNewItem;
+  document.getElementById('item-cancel').onclick = closeItem;
+  document.getElementById('item-close').onclick = closeItem;
+  document.getElementById('item-save').onclick = saveItem;
+  document.getElementById('photo-add-btn').onclick = ()=>{ document.getElementById('photo-input').click(); };
+  document.getElementById('add-friend-btn').onclick = addFriend;
+  document.getElementById('new-group-btn').onclick = openGroupModal;
+  document.getElementById('group-cancel').onclick = closeGroupModal;
+  document.getElementById('group-close').onclick = closeGroupModal;
+  document.getElementById('group-save').onclick = saveGroup;
+
+  document.querySelectorAll('.modal-mask').forEach(m => {
+    m.onclick = (e) => { if (e.target === m) m.classList.remove('show'); };
+  });
+}
+
+// ============ 初始化 ============
+document.addEventListener('DOMContentLoaded', () => {
+  bindEvents();
+  if (token && user) {
+    enterApp();
+  }
+});
+</script>
+</body>
+</html>

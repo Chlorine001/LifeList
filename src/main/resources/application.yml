@@ -1,0 +1,33 @@
+server:
+  port: 8080
+
+spring:
+  application:
+    name: life-list-backend
+  datasource:
+    driver-class-name: com.mysql.cj.jdbc.Driver
+    # 改成你自己的 MySQL 地址/账号/密码
+    url: jdbc:mysql://localhost:3306/life_list?useUnicode=true&characterEncoding=utf8&serverTimezone=Asia/Shanghai&useSSL=false&allowPublicKeyRetrieval=true
+    username: root
+    password: 123456
+  jackson:
+    date-format: yyyy-MM-dd HH:mm:ss
+    time-zone: GMT+8
+
+# MyBatis-Plus 配置
+mybatis-plus:
+  configuration:
+    map-underscore-to-camel-case: true   # 下划线转驼峰（done_date -> doneDate）
+    log-impl: org.apache.ibatis.logging.stdout.StdOutImpl  # 打印 SQL，学习时看执行了什么
+  global-config:
+    db-config:
+      logic-delete-field: deleted        # 逻辑删除字段
+      logic-delete-value: 1              # 删除标记
+      logic-not-delete-value: 0          # 未删标记
+
+# 自定义配置
+lifelist:
+  jwt:
+    # 生产环境务必改成一段足够长的随机字符串（至少 32 字节）
+    secret: life-list-secret-key-please-change-this-to-a-long-random-string
+    expire: 604800000  # 7 天（毫秒）
