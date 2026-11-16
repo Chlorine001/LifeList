@@ -1,6 +1,7 @@
 package com.lifelist.entity;
 
 import com.baomidou.mybatisplus.annotation.IdType;
+import com.baomidou.mybatisplus.annotation.TableField;
 import com.baomidou.mybatisplus.annotation.TableId;
 import com.baomidou.mybatisplus.annotation.TableName;
 import lombok.Data;
@@ -23,4 +24,8 @@ public class GroupMember {
     private Long friendId;
 
     private LocalDateTime createdAt;
+
+    /** 好友昵称（联表查出，非数据库字段） */
+    @TableField(exist = false)
+    private String friendNickname;
 }

@@ -93,6 +93,8 @@
   .btn:hover{color:var(--ink);border-color:#d5d5d5;}
   .btn.primary{background:var(--ink);color:#fff;border-color:var(--ink);}
   .btn.primary:hover{background:#444;color:#fff;}
+  .btn.danger{color:#c0392b;border-color:#e8c4bf;background:#fdf6f5;}
+  .btn.danger:hover{color:#a93226;border-color:#d9a49d;}
 
   /* 分类标题与卡片 */
   .cat-title{margin:26px 0 14px;display:flex;align-items:center;gap:12px;font-size:13px;color:var(--ink-faint);letter-spacing:2px;}
@@ -208,7 +210,8 @@
       <div class="brand"><b>人生清单</b> · 手账</div>
       <nav class="tabs">
         <button class="on" data-tab="items">小事清单</button>
-        <button data-tab="friends">好友与分组</button>
+        <button data-tab="friends">好友</button>
+        <button data-tab="groups">分组</button>
       </nav>
       <div class="nav-right">
         <div class="user-avatar" id="user-avatar">我</div>
@@ -308,17 +311,28 @@
   </div>
 </div>
 
-<!-- 新建分组弹窗 -->
+<!-- 新建/编辑分组弹窗 -->
 <div class="modal-mask" id="group-mask">
   <div class="modal">
     <div class="modal-head">
-      <div><h3>新建分组</h3></div>
+      <div><h3 id="group-modal-title">新建分组</h3></div>
       <button class="modal-close" id="group-close">×</button>
     </div>
     <div class="modal-body">
       <div class="field">
         <label>组名</label>
         <input type="text" id="g-name" placeholder="如：大学同学">
+      </div>
+      <div class="field" id="group-members-field" style="display:none;">
+        <label>组成员</label>
+        <div id="group-members-list"></div>
+        <div class="field" style="margin-top:8px;">
+          <label>添加好友到组</label>
+          <div style="display:flex;gap:6px;">
+            <select id="g-add-member-select" style="flex:1;"></select>
+            <button class="btn primary" id="g-add-member-btn" style="padding:8px 14px;">添加</button>
+          </div>
+        </div>
       </div>
     </div>
     <div class="modal-foot">
@@ -344,6 +358,7 @@ let friends = [];
 let pending = [];
 let groups = [];
 let editingItemId = null;
+let editingGroupId = null;
 let curStatus = '想去做';
 let curMood = '';
 
@@ -574,18 +589,24 @@ async function saveItem(){
 }
 
 // ============ 好友与分组 ============
+function friendDisplayName(f){
+  return (f.friendNickname && f.friendNickname !== 'null') ? f.friendNickname : (f.friendUsername || ('好友 #' + f.friendId));
+}
+
 function renderFriends(){
   const fl = document.getElementById('friend-list');
   fl.innerHTML = friends.length ? friends.map(f => {
+    const nm = friendDisplayName(f);
     return `<div class="friend-item">
-      <div class="friend-info"><div class="user-avatar">友</div><div><div class="friend-name">好友 #${f.friendId}</div><div class="friend-meta">已通过</div></div></div>
+      <div class="friend-info"><div class="user-avatar">${esc(nm.charAt(0))}</div><div><div class="friend-name">${esc(nm)}</div><div class="friend-meta">已通过</div></div></div>
     </div>`;
   }).join('') : '<div class="empty">还没有好友，用上方输入框添加</div>';
 
   const pl = document.getElementById('pending-list');
   pl.innerHTML = pending.length ? pending.map(f => {
+    const nm = (f.friendNickname && f.friendNickname !== 'null') ? f.friendNickname : (f.friendUsername || ('用户 #' + f.userId));
     return `<div class="friend-item">
-      <div class="friend-info"><div class="user-avatar">申</div><div><div class="friend-name">用户 #${f.userId}</div><div class="friend-meta">想加你为好友</div></div></div>
+      <div class="friend-info"><div class="user-avatar">申</div><div><div class="friend-name">${esc(nm)}</div><div class="friend-meta">想加你为好友</div></div></div>
       <div style="display:flex;gap:6px">
         <button class="btn primary" style="padding:5px 14px;font-size:12.5px" onclick="acceptFriend(${f.id})">通过</button>
         <button class="btn" style="padding:5px 14px;font-size:12.5px" onclick="rejectFriend(${f.id})">拒绝</button>
@@ -595,8 +616,13 @@ function renderFriends(){
 
   const gl = document.getElementById('group-list');
   gl.innerHTML = groups.length ? groups.map(g => {
+    const cnt = g.memberCount || 0;
     return `<div class="friend-item">
-      <div class="friend-info"><div class="user-avatar">组</div><div><div class="friend-name">${esc(g.name)}</div><div class="friend-meta">分组</div></div></div>
+      <div class="friend-info"><div class="user-avatar">组</div><div><div class="friend-name">${esc(g.name)}</div><div class="friend-meta">分组 · ${cnt} 人</div></div></div>
+      <div style="display:flex;gap:6px">
+        <button class="btn" style="padding:5px 14px;font-size:12.5px" onclick="editGroup(${g.id})">编辑</button>
+        <button class="btn danger" style="padding:5px 14px;font-size:12.5px" onclick="deleteGroup(${g.id})">删除</button>
+      </div>
     </div>`;
   }).join('') : '<div class="empty">还没有分组，点「＋ 新建分组」</div>';
 }
@@ -621,18 +647,94 @@ async function rejectFriend(id){
   catch(err){ showToast(err.message); }
 }
 
-function openGroupModal(){ document.getElementById('group-mask').classList.add('show'); }
+function openGroupModal(){
+  editingGroupId = null;
+  document.getElementById('group-modal-title').textContent = '新建分组';
+  document.getElementById('g-name').value = '';
+  document.getElementById('group-save').textContent = '创建';
+  document.getElementById('group-members-field').style.display = 'none';
+  document.getElementById('group-mask').classList.add('show');
+}
 function closeGroupModal(){ document.getElementById('group-mask').classList.remove('show'); }
+
+async function editGroup(id){
+  editingGroupId = id;
+  const g = groups.find(x => x.id === id);
+  if (!g) return;
+  document.getElementById('group-modal-title').textContent = '编辑分组';
+  document.getElementById('g-name').value = g.name;
+  document.getElementById('group-save').textContent = '保存';
+  document.getElementById('group-members-field').style.display = '';
+  document.getElementById('group-mask').classList.add('show');
+  await loadGroupMembers(id);
+}
+
+async function loadGroupMembers(groupId){
+  const box = document.getElementById('group-members-list');
+  try {
+    const members = await api('/api/groups/' + groupId + '/members');
+    box.innerHTML = members.length ? members.map(m => `
+      <div class="friend-item" style="margin-bottom:6px;">
+        <div class="friend-info"><div class="user-avatar">${esc((m.friendNickname||'?').charAt(0))}</div><div><div class="friend-name">${esc(m.friendNickname || ('用户 #' + m.friendId))}</div></div></div>
+        <button class="btn danger" style="padding:4px 12px;font-size:12px" onclick="removeGroupMember(${groupId}, ${m.friendId})">移除</button>
+      </div>`).join('') : '<div class="empty" style="padding:6px 0;">组里还没有人，从下方添加</div>';
+    // 填充可添加的好友（排除已在组的）
+    const inGroup = new Set(members.map(m => m.friendId));
+    const sel = document.getElementById('g-add-member-select');
+    const available = friends.filter(f => !inGroup.has(f.friendId));
+    sel.innerHTML = available.length
+      ? available.map(f => `<option value="${f.friendId}">${esc(friendDisplayName(f))}</option>`).join('')
+      : '<option value="">没有可添加的好友</option>';
+  } catch(err) { showToast(err.message); }
+}
+
+async function addGroupMember(){
+  if (!editingGroupId) return;
+  const sel = document.getElementById('g-add-member-select');
+  const fid = sel.value;
+  if (!fid) { showToast('没有可添加的好友'); return; }
+  try {
+    await api('/api/groups/' + editingGroupId + '/members', { method: 'POST', body: JSON.stringify({ friendId: Number(fid) }) });
+    showToast('已添加');
+    await loadGroupMembers(editingGroupId);
+    await loadFriends();
+  } catch(err) { showToast(err.message); }
+}
+
+async function removeGroupMember(groupId, friendId){
+  try {
+    await api('/api/groups/' + groupId + '/members/' + friendId, { method: 'DELETE' });
+    showToast('已移除');
+    await loadGroupMembers(groupId);
+    await loadFriends();
+  } catch(err) { showToast(err.message); }
+}
+
+async function deleteGroup(id){
+  const g = groups.find(x => x.id === id);
+  if (!confirm('确定删除分组「' + (g ? g.name : '') + '」吗？组内成员关系也会一并删除。')) return;
+  try {
+    await api('/api/groups/' + id, { method: 'DELETE' });
+    showToast('已删除');
+    await loadFriends();
+  } catch(err) { showToast(err.message); }
+}
+
 async function saveGroup(){
   const name = document.getElementById('g-name').value.trim();
   if (!name) { showToast('请输入组名'); return; }
   try {
-    await api('/api/groups', { method: 'POST', body: JSON.stringify({ name }) });
-    showToast('已创建');
+    if (editingGroupId) {
+      await api('/api/groups/' + editingGroupId, { method: 'PUT', body: JSON.stringify({ name }) });
+      showToast('已保存');
+    } else {
+      await api('/api/groups', { method: 'POST', body: JSON.stringify({ name }) });
+      showToast('已创建');
+    }
     closeGroupModal();
     document.getElementById('g-name').value = '';
     await loadFriends();
-  } catch(err){ showToast(err.message); }
+  } catch(err) { showToast(err.message); }
 }
 
 // ============ 事件绑定 ============
@@ -663,6 +765,7 @@ function bindEvents(){
   document.getElementById('group-cancel').onclick = closeGroupModal;
   document.getElementById('group-close').onclick = closeGroupModal;
   document.getElementById('group-save').onclick = saveGroup;
+  document.getElementById('g-add-member-btn').onclick = addGroupMember;
 
   document.querySelectorAll('.modal-mask').forEach(m => {
     m.onclick = (e) => { if (e.target === m) m.classList.remove('show'); };

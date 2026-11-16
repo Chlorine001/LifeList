@@ -51,16 +51,34 @@ public class FriendService {
 
     /** 我的好友列表（已通过），带对方昵称 */
     public List<Friend> list() {
-        return friendMapper.selectList(new LambdaQueryWrapper<Friend>()
+        List<Friend> list = friendMapper.selectList(new LambdaQueryWrapper<Friend>()
                 .eq(Friend::getUserId, UserContext.get())
                 .eq(Friend::getStatus, "accepted"));
+        return fillNickname(list, true);
     }
 
     /** 待我审核的申请（别人申请加我，我看到的是 friendId 指向我的 pending 记录） */
     public List<Friend> pending() {
-        return friendMapper.selectList(new LambdaQueryWrapper<Friend>()
+        List<Friend> list = friendMapper.selectList(new LambdaQueryWrapper<Friend>()
                 .eq(Friend::getFriendId, UserContext.get())
                 .eq(Friend::getStatus, "pending"));
+        return fillNickname(list, false);
+    }
+
+    /**
+     * 联表补全昵称：list 场景对方是 friendId；pending 场景对方是 userId
+     * @param asTarget 对方是否为 friendId（true）还是 userId（false）
+     */
+    private List<Friend> fillNickname(List<Friend> list, boolean asTarget) {
+        for (Friend f : list) {
+            Long otherId = asTarget ? f.getFriendId() : f.getUserId();
+            User u = userMapper.selectById(otherId);
+            if (u != null) {
+                f.setFriendNickname(u.getNickname());
+                f.setFriendUsername(u.getUsername());
+            }
+        }
+        return list;
     }
 
     /** 审核通过：把「对方申请加我」这条改成 accepted，同时给我补一条反向 accepted */

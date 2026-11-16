@@ -26,6 +26,20 @@ public class GroupController {
         return R.ok(groupService.create(body.get("name")));
     }
 
+    /** 重命名分组 */
+    @PutMapping("/{groupId}")
+    public R<Void> rename(@PathVariable Long groupId, @RequestBody Map<String, String> body) {
+        groupService.rename(groupId, body.get("name"));
+        return R.ok();
+    }
+
+    /** 删除分组 */
+    @DeleteMapping("/{groupId}")
+    public R<Void> delete(@PathVariable Long groupId) {
+        groupService.delete(groupId);
+        return R.ok();
+    }
+
     /** 我的分组列表 */
     @GetMapping
     public R<List<Group>> list() {
@@ -36,6 +50,13 @@ public class GroupController {
     @PostMapping("/{groupId}/members")
     public R<Void> addMember(@PathVariable Long groupId, @RequestBody Map<String, Long> body) {
         groupService.addMember(groupId, body.get("friendId"));
+        return R.ok();
+    }
+
+    /** 把朋友移出组 */
+    @DeleteMapping("/{groupId}/members/{friendId}")
+    public R<Void> removeMember(@PathVariable Long groupId, @PathVariable Long friendId) {
+        groupService.removeMember(groupId, friendId);
         return R.ok();
     }
 

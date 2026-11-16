@@ -5,8 +5,10 @@ import com.lifelist.common.BizException;
 import com.lifelist.common.UserContext;
 import com.lifelist.entity.Group;
 import com.lifelist.entity.GroupMember;
+import com.lifelist.entity.User;
 import com.lifelist.mapper.GroupMapper;
 import com.lifelist.mapper.GroupMemberMapper;
+import com.lifelist.mapper.UserMapper;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
@@ -22,6 +24,7 @@ public class GroupService {
 
     private final GroupMapper groupMapper;
     private final GroupMemberMapper groupMemberMapper;
+    private final UserMapper userMapper;
 
     /** 创建分组 */
     public Group create(String name) {
@@ -32,15 +35,38 @@ public class GroupService {
         return g;
     }
 
-    /** 我的分组列表 */
+    /** 重命名分组 */
+    public void rename(Long groupId, String name) {
+        if (name == null || name.trim().isEmpty()) {
+            throw new BizException("组名不能为空");
+        }
+        Group g = getOwnedGroup(groupId);
+        g.setName(name.trim());
+        groupMapper.updateById(g);
+    }
+
+    /** 删除分组（连同成员一起删） */
+    public void delete(Long groupId) {
+        getOwnedGroup(groupId);
+        groupMemberMapper.delete(new LambdaQueryWrapper<GroupMember>()
+                .eq(GroupMember::getGroupId, groupId));
+        groupMapper.deleteById(groupId);
+    }
+
+    /** 我的分组列表（带成员数） */
     public List<Group> list() {
-        return groupMapper.selectList(new LambdaQueryWrapper<Group>()
+        List<Group> list = groupMapper.selectList(new LambdaQueryWrapper<Group>()
                 .eq(Group::getUserId, UserContext.get()));
+        for (Group g : list) {
+            g.setMemberCount(Math.toIntExact(groupMemberMapper.selectCount(
+                    new LambdaQueryWrapper<GroupMember>().eq(GroupMember::getGroupId, g.getId()))));
+        }
+        return list;
     }
 
     /** 把朋友加入组 */
     public void addMember(Long groupId, Long friendId) {
-        Group g = getOwnedGroup(groupId);
+        getOwnedGroup(groupId);
         Long exists = groupMemberMapper.selectCount(new LambdaQueryWrapper<GroupMember>()
                 .eq(GroupMember::getGroupId, groupId)
                 .eq(GroupMember::getFriendId, friendId));
@@ -53,11 +79,27 @@ public class GroupService {
         groupMemberMapper.insert(m);
     }
 
-    /** 组内成员列表 */
+    /** 把朋友移出组 */
+    public void removeMember(Long groupId, Long friendId) {
+        getOwnedGroup(groupId);
+        groupMemberMapper.delete(new LambdaQueryWrapper<GroupMember>()
+                .eq(GroupMember::getGroupId, groupId)
+                .eq(GroupMember::getFriendId, friendId));
+    }
+
+    /** 组内成员列表（带昵称） */
     public List<GroupMember> members(Long groupId) {
         getOwnedGroup(groupId);
-        return groupMemberMapper.selectList(new LambdaQueryWrapper<GroupMember>()
+        List<GroupMember> list = groupMemberMapper.selectList(new LambdaQueryWrapper<GroupMember>()
                 .eq(GroupMember::getGroupId, groupId));
+        for (GroupMember m : list) {
+            User u = userMapper.selectById(m.getFriendId());
+            if (u != null) {
+                m.setFriendNickname(u.getNickname() != null && !u.getNickname().isEmpty()
+                        ? u.getNickname() : u.getUsername());
+            }
+        }
+        return list;
     }
 
     private Group getOwnedGroup(Long groupId) {
