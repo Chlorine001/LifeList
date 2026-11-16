@@ -62,9 +62,23 @@
   nav.tabs button.on{background:var(--ink);color:#fff;}
   .nav-right{display:flex;align-items:center;gap:8px;}
   .user-avatar{width:28px;height:28px;border-radius:50%;background:var(--ink);color:#fff;display:flex;align-items:center;justify-content:center;font-weight:500;font-size:13px;}
+  .user-avatar-wrap{position:relative;display:flex;align-items:center;gap:8px;cursor:pointer;padding:2px;}
+  .user-avatar-wrap:hover .user-name{color:var(--ink);}
+  .user-avatar-wrap:hover .user-avatar{background:#444;}
+  .avatar-dot{position:absolute;top:0;right:0;width:9px;height:9px;border-radius:50%;background:#e74c3c;border:2px solid #fff;display:none;}
+  .avatar-dot.show{display:block;}
   .user-name{font-size:13px;color:var(--ink-soft);white-space:nowrap;}
   .logout-btn{border:1px solid var(--line);background:var(--paper);border-radius:999px;padding:6px 14px;cursor:pointer;font-size:12.5px;color:var(--ink-soft);font-family:inherit;transition:all .18s;}
   .logout-btn:hover{color:var(--ink);border-color:#d5d5d5;}
+
+  /* 个人主页弹窗 */
+  .profile-head{display:flex;align-items:center;gap:14px;margin-bottom:18px;}
+  .profile-avatar{width:56px;height:56px;border-radius:50%;background:var(--ink);color:#fff;display:flex;align-items:center;justify-content:center;font-size:24px;font-weight:500;}
+  .profile-info{flex:1;}
+  .profile-nick{font-size:18px;font-family:Georgia,'Songti SC',serif;color:var(--ink);margin-bottom:2px;}
+  .profile-username{font-size:12.5px;color:var(--ink-faint);}
+  .profile-field{display:flex;gap:8px;margin-bottom:16px;}
+  .profile-field input{flex:1;border:1px solid var(--line);border-radius:8px;padding:8px 12px;font-family:inherit;font-size:13px;color:var(--ink);background:var(--paper);}
 
   .wrap{max-width:980px;margin:0 auto;padding:0 20px 80px;}
 
@@ -122,14 +136,14 @@
   /* 弹窗 */
   .modal-mask{position:fixed;inset:0;background:rgba(40,40,40,.32);z-index:100;display:flex;align-items:flex-start;justify-content:center;padding:6vh 16px 16px;opacity:0;pointer-events:none;transition:opacity .2s ease;overflow-y:auto;}
   .modal-mask.show{opacity:1;pointer-events:auto;}
-  .modal{background:var(--paper);border-radius:14px;width:100%;max-width:520px;box-shadow:0 18px 50px rgba(0,0,0,.14);transform:translateY(10px);transition:transform .22s ease;}
+  .modal{background:var(--paper);border-radius:14px;width:100%;max-width:520px;box-shadow:0 18px 50px rgba(0,0,0,.14);transform:translateY(10px);transition:transform .22s ease;display:flex;flex-direction:column;max-height:88vh;}
   .modal-mask.show .modal{transform:translateY(0);}
   .modal-head{padding:20px 24px 0;display:flex;justify-content:space-between;align-items:flex-start;gap:12px;}
   .modal-head .m-num{font-size:11px;color:var(--ink-faint);letter-spacing:1.5px;font-family:Georgia,serif;}
   .modal-head h3{font-size:16px;font-weight:600;margin-top:2px;}
   .modal-close{border:none;background:var(--line-soft);width:28px;height:28px;border-radius:50%;cursor:pointer;color:var(--ink-soft);font-size:14px;line-height:1;flex:none;transition:background .15s;}
   .modal-close:hover{background:#e6e6e6;color:var(--ink);}
-  .modal-body{padding:18px 24px 24px;display:flex;flex-direction:column;gap:18px;}
+  .modal-body{padding:18px 24px 24px;display:flex;flex-direction:column;gap:18px;overflow-y:auto;min-height:0;}
   .field label{display:block;font-size:12px;color:var(--ink-faint);letter-spacing:1px;margin-bottom:8px;}
   .field input[type=text],.field textarea,.field select{
     width:100%;font-family:inherit;font-size:13px;color:var(--ink);border:1px solid var(--line);border-radius:8px;padding:10px 12px;background:#fbfbfb;outline:none;transition:border-color .15s;
@@ -214,8 +228,11 @@
         <button data-tab="groups">分组</button>
       </nav>
       <div class="nav-right">
-        <div class="user-avatar" id="user-avatar">我</div>
-        <span class="user-name" id="user-name"></span>
+        <div class="user-avatar-wrap" id="profile-trigger" title="个人主页">
+          <div class="user-avatar" id="user-avatar">我</div>
+          <span class="user-name" id="user-name"></span>
+          <span class="avatar-dot" id="avatar-dot"></span>
+        </div>
         <button class="logout-btn" id="logout-btn">退出</button>
       </div>
     </div>
@@ -350,6 +367,37 @@
     <div class="modal-foot">
       <button class="btn" id="group-cancel">取消</button>
       <button class="btn primary" id="group-save">创建</button>
+    </div>
+  </div>
+</div>
+
+<!-- 个人主页弹窗 -->
+<div class="modal-mask" id="profile-mask">
+  <div class="modal">
+    <div class="modal-head">
+      <div><h3>个人主页</h3></div>
+      <button class="modal-close" id="profile-close">×</button>
+    </div>
+    <div class="modal-body">
+      <div class="profile-head">
+        <div class="profile-avatar" id="profile-avatar">我</div>
+        <div class="profile-info">
+          <div class="profile-nick" id="profile-nick"></div>
+          <div class="profile-username" id="profile-username"></div>
+        </div>
+      </div>
+      <div class="field">
+        <label>修改昵称</label>
+        <div class="profile-field">
+          <input type="text" id="profile-nick-input" placeholder="输入新昵称">
+          <button class="btn primary" id="profile-save-nick" style="padding:8px 16px;">保存</button>
+        </div>
+      </div>
+      <div class="section-title">待我审核的申请</div>
+      <div id="profile-pending-list" style="max-height:40vh;overflow-y:auto;"></div>
+    </div>
+    <div class="modal-foot">
+      <button class="btn" id="profile-cancel">关闭</button>
     </div>
   </div>
 </div>
@@ -635,6 +683,8 @@ function renderFriends(){
       </div>
     </div>`;
   }).join('') : '<div class="empty">暂无待审核申请</div>';
+
+  updateProfileBadge();
 }
 
 function renderGroups(){
@@ -655,6 +705,62 @@ function renderGroups(){
       </div>
     </div>`;
   }).join('') : (groups.length ? '<div class="empty">没有匹配的分组</div>' : '<div class="empty">还没有分组，点「＋ 新建分组」</div>');
+}
+
+// ============ 个人主页 ============
+function updateProfileBadge(){
+  const dot = document.getElementById('avatar-dot');
+  if (dot) dot.classList.toggle('show', pending.length > 0);
+}
+
+function openProfile(){
+  // 刷新昵称显示
+  const nm = user.nickname || user.username;
+  document.getElementById('profile-avatar').textContent = nm.charAt(0);
+  document.getElementById('profile-nick').textContent = nm;
+  document.getElementById('profile-username').textContent = '@' + (user.username || '');
+  document.getElementById('profile-nick-input').value = user.nickname || '';
+  renderProfilePending();
+  document.getElementById('profile-mask').classList.add('show');
+}
+function closeProfile(){ document.getElementById('profile-mask').classList.remove('show'); }
+
+function renderProfilePending(){
+  const box = document.getElementById('profile-pending-list');
+  box.innerHTML = pending.length ? pending.map(f => {
+    const nm = (f.friendNickname && f.friendNickname !== 'null') ? f.friendNickname : (f.friendUsername || ('用户 #' + f.userId));
+    return `<div class="friend-item">
+      <div class="friend-info"><div class="user-avatar">${esc(nm.charAt(0))}</div><div><div class="friend-name">${esc(nm)}</div><div class="friend-meta">想加你为好友</div></div></div>
+      <div style="display:flex;gap:6px">
+        <button class="btn primary" style="padding:5px 14px;font-size:12.5px" onclick="profileAccept(${f.id})">通过</button>
+        <button class="btn" style="padding:5px 14px;font-size:12.5px" onclick="profileReject(${f.id})">拒绝</button>
+      </div>
+    </div>`;
+  }).join('') : '<div class="empty">暂无待审核申请</div>';
+}
+
+async function profileAccept(id){
+  try { await api('/api/friends/' + id + '/accept', { method: 'POST' }); showToast('已通过'); await loadFriends(); renderProfilePending(); }
+  catch(err){ showToast(err.message); }
+}
+async function profileReject(id){
+  try { await api('/api/friends/' + id + '/reject', { method: 'POST' }); showToast('已拒绝'); await loadFriends(); renderProfilePending(); }
+  catch(err){ showToast(err.message); }
+}
+
+async function saveNickname(){
+  const nick = document.getElementById('profile-nick-input').value.trim();
+  if (!nick) { showToast('昵称不能为空'); return; }
+  try {
+    const data = await api('/api/auth/profile', { method: 'PUT', body: JSON.stringify({ nickname: nick }) });
+    user = { id: data.userId, username: data.username, nickname: data.nickname };
+    localStorage.setItem(LS_USER, JSON.stringify(user));
+    document.getElementById('user-name').textContent = user.nickname || user.username;
+    document.getElementById('user-avatar').textContent = (user.nickname || user.username).charAt(0);
+    document.getElementById('profile-nick').textContent = user.nickname || user.username;
+    document.getElementById('profile-avatar').textContent = (user.nickname || user.username).charAt(0);
+    showToast('昵称已更新');
+  } catch(err){ showToast(err.message); }
 }
 
 async function addFriend(){
@@ -799,6 +905,11 @@ function bindEvents(){
   document.getElementById('group-close').onclick = closeGroupModal;
   document.getElementById('group-save').onclick = saveGroup;
   document.getElementById('g-add-member-btn').onclick = addGroupMember;
+
+  document.getElementById('profile-trigger').onclick = openProfile;
+  document.getElementById('profile-close').onclick = closeProfile;
+  document.getElementById('profile-cancel').onclick = closeProfile;
+  document.getElementById('profile-save-nick').onclick = saveNickname;
 
   document.querySelectorAll('.modal-mask').forEach(m => {
     m.onclick = (e) => { if (e.target === m) m.classList.remove('show'); };

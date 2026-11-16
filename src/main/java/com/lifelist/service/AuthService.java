@@ -3,6 +3,7 @@ package com.lifelist.service;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.lifelist.common.BizException;
 import com.lifelist.common.JwtUtil;
+import com.lifelist.common.UserContext;
 import com.lifelist.dto.LoginRequest;
 import com.lifelist.dto.LoginResponse;
 import com.lifelist.dto.RegisterRequest;
@@ -56,6 +57,20 @@ public class AuthService {
         if (!encoder.matches(req.getPassword(), user.getPassword())) {
             throw new BizException("用户名或密码错误");
         }
+        return buildLoginResponse(user);
+    }
+
+    /** 修改昵称 */
+    public LoginResponse updateNickname(String nickname) {
+        if (nickname == null || nickname.trim().isEmpty()) {
+            throw new BizException("昵称不能为空");
+        }
+        User user = userMapper.selectById(UserContext.get());
+        if (user == null) {
+            throw new BizException("用户不存在");
+        }
+        user.setNickname(nickname.trim());
+        userMapper.updateById(user);
         return buildLoginResponse(user);
     }
 
